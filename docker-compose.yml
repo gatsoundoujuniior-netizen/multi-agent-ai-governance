@@ -12,8 +12,12 @@ services:
       - "${POSTGRES_PORT}:5432"   # 5433 cote Windows, pour ne rien cogner
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Les scripts SQL de ce dossier s'executent au tout premier demarrage
-      - ./sql:/docker-entrypoint-initdb.d
+      # sql/init s'execute une seule fois, au tout premier demarrage (base vide)
+      - ./sql/init:/docker-entrypoint-initdb.d
+      # Les autres scripts se lancent a la main : psql -f /sql/<fichier>.sql
+      - ./sql:/sql:ro
+      # Petites tables simulees, lues par COPY ... FROM '/seed/<fichier>.csv'
+      - ./data/seed:/seed:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
