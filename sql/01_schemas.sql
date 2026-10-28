@@ -1,0 +1,5 @@
+-- Les 4 familles de tables du projet (convention commune aux 3 membres)
+CREATE SCHEMA IF NOT EXISTS ref;     -- donnees de reference (devises, pays...)
+CREATE SCHEMA IF NOT EXISTS master;  -- MDM : golden records (company...)
+CREATE SCHEMA IF NOT EXISTS data;    -- donnees metier (un dataset chacun)
+CREATE SCHEMA IF NOT EXISTS gov;     -- gouvernance (agents, policies, audit)

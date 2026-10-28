@@ -1,0 +1,23 @@
+# PostgreSQL pour les donnees du projet (separe de la base interne d'OpenMetadata).
+# OpenMetadata se lance a part : voir openmetadata/docker-compose.yml
+services:
+  postgres:
+    image: postgres:16
+    container_name: gouv_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"   # 5433 cote Windows, pour ne rien cogner
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Les scripts SQL de ce dossier s'executent au tout premier demarrage
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
