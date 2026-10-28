@@ -1,7 +1,7 @@
 # TP Projet 3 : HR Agent et MDM Ressources
 
 **HESTIM | Data Governance | Projet "Enterprise Multi-Agent AI Governance Platform"**
-**Membre : HR | Dataset : IBM HR Analytics Employee Attrition & Performance | Prérequis : TP0 terminé**
+**Membre : Mohammed (HR) | Dataset : IBM HR Analytics Employee Attrition & Performance | Prérequis : TP0 terminé**
 
 ---
 
@@ -39,7 +39,7 @@ Votre MDM s'appelle **Ressources** (domaine **Parties** pour les employés, **Re
 | PII | Oui (âge, genre, situation familiale, salaire...) |
 | Data Owner | Direction RH |
 | Data Steward | Vous |
-| Relecteur de vos PR | Membre Finance |
+| Relecteur de vos PR | Junior (Finance) |
 
 ---
 

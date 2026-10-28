@@ -1,7 +1,7 @@
 # TP Projet 1 : Finance Agent et MDM Tiers et Structures
 
 **HESTIM | Data Governance | Projet "Enterprise Multi-Agent AI Governance Platform"**
-**Membre : Finance | Dataset : SEC Financial Statement Data | Prérequis : TP0 terminé**
+**Membre : Junior (Finance) | Dataset : SEC Financial Statement Data | Prérequis : TP0 terminé**
 
 ---
 
@@ -38,7 +38,7 @@ Votre MDM s'appelle **Tiers et Structures** :
 | PII | Non (ce sont des entreprises, pas des personnes) |
 | Data Owner | Direction Finance |
 | Data Steward | Vous |
-| Relecteur de vos PR | Membre Investment |
+| Relecteur de vos PR | Ivan (Investment) |
 
 ---
 

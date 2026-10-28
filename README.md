@@ -13,10 +13,10 @@ qui repond ALLOW ou DENY et ecrit chaque decision dans `gov.audit_log`.
 
 | TP | Pour qui | Fichier |
 |---|---|---|
-| TP0 Fondations communes | Les 3 membres ensemble | [docs/tp/TP0_Commun_Fondations.md](docs/tp/TP0_Commun_Fondations.md) |
-| TP1 Finance, MDM Tiers et Structures | Membre Finance | [docs/tp/TP1_Finance_MDM_Tiers_Structures.md](docs/tp/TP1_Finance_MDM_Tiers_Structures.md) |
-| TP2 Investment, MDM Produits | Membre Investment | [docs/tp/TP2_Investment_MDM_Produits.md](docs/tp/TP2_Investment_MDM_Produits.md) |
-| TP3 HR, MDM Ressources | Membre HR | [docs/tp/TP3_HR_MDM_Ressources.md](docs/tp/TP3_HR_MDM_Ressources.md) |
+| TP0 Fondations communes | Junior, Ivan et Mohammed ensemble | [docs/tp/TP0_Commun_Fondations.md](docs/tp/TP0_Commun_Fondations.md) |
+| TP1 Finance, MDM Tiers et Structures | Junior (branche `finance`) | [docs/tp/TP1_Finance_MDM_Tiers_Structures.md](docs/tp/TP1_Finance_MDM_Tiers_Structures.md) |
+| TP2 Investment, MDM Produits | Ivan (branche `investment`) | [docs/tp/TP2_Investment_MDM_Produits.md](docs/tp/TP2_Investment_MDM_Produits.md) |
+| TP3 HR, MDM Ressources | Mohammed (branche `hr`) | [docs/tp/TP3_HR_MDM_Ressources.md](docs/tp/TP3_HR_MDM_Ressources.md) |
 
 Les versions PDF sont dans `docs/tp/pdf/`. Les prompts pour se faire guider par Claude sont dans `docs/tp/prompts/`.
 

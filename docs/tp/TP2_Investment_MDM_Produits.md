@@ -1,7 +1,7 @@
 # TP Projet 2 : Investment Agent et MDM Produits
 
 **HESTIM | Data Governance | Projet "Enterprise Multi-Agent AI Governance Platform"**
-**Membre : Investment | Dataset : S&P 500 Historical Market Data | Prérequis : TP0 terminé**
+**Membre : Ivan (Investment) | Dataset : S&P 500 Historical Market Data | Prérequis : TP0 terminé**
 
 ---
 
@@ -39,7 +39,7 @@ Votre MDM s'appelle **Produits** (domaine **Things** du cours) :
 | PII | Non |
 | Data Owner | Direction Investissement |
 | Data Steward | Vous |
-| Relecteur de vos PR | Membre HR |
+| Relecteur de vos PR | Mohammed (HR) |
 
 ---
 

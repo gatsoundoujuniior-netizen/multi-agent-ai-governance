@@ -48,7 +48,7 @@
 
 ## 2. Qui fait quoi
 
-| | Membre 1 | Membre 2 | Membre 3 |
+| | Junior | Ivan | Mohammed |
 |---|---|---|---|
 | Agent | Finance Agent | Investment Agent | HR Agent |
 | Dataset | SEC Financial Statement Data | S&P 500 Historical Market Data | IBM HR Analytics |
@@ -321,9 +321,9 @@ La page Classification avec `Confidentialite` et `Sensibilite`, et le test de co
 
 | Auteur | Relecteur |
 |---|---|
-| Finance | Investment |
-| Investment | HR |
-| HR | Finance |
+| Junior (Finance) | Ivan (Investment) |
+| Ivan (Investment) | Mohammed (HR) |
+| Mohammed (HR) | Junior (Finance) |
 
 4. **Jamais de données dans Git** : `data/raw/` est ignoré. Chacun télécharge son dataset.
 5. **Jamais le fichier `.env` dans Git**.
