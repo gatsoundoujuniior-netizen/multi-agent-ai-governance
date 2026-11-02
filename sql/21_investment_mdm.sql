@@ -123,11 +123,13 @@ CREATE TABLE IF NOT EXISTS master.product (
   category   VARCHAR(40),
   risk_level VARCHAR(8) CHECK (risk_level IN ('Low','Medium','High')));
 
-CREATE TEMP TABLE product_seed (code TEXT, label TEXT, category TEXT, risk_level TEXT);
-COPY product_seed FROM '/seed/product.csv' WITH (FORMAT csv, HEADER true);
+-- Copie brute dans data.product_raw, tout en texte, comme les autres sources
+DROP TABLE IF EXISTS data.product_raw;
+CREATE TABLE data.product_raw (code TEXT, label TEXT, category TEXT, risk_level TEXT);
+COPY data.product_raw FROM '/seed/product.csv' WITH (FORMAT csv, HEADER true);
 INSERT INTO master.product (code, label, category, risk_level)
 SELECT UPPER(TRIM(code)), TRIM(label), TRIM(category), INITCAP(TRIM(risk_level))
-FROM product_seed
+FROM data.product_raw
 ON CONFLICT (code) DO UPDATE
   SET label = EXCLUDED.label, category = EXCLUDED.category, risk_level = EXCLUDED.risk_level;
 

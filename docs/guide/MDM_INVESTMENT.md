@@ -51,7 +51,46 @@ Les colonnes `source`, `name_source` et `cik_source` indiquent la source gagnant
 
 Les colonnes `risk_profile_source` et `risk_profile_date` indiquent d'où vient le profil et de quand il date.
 
-## Décisions
+## Décisions par étape
+
+Les lignes marquées *à compléter* dépendent du fichier Kaggle retenu par l'équipe.
+
+### Étape 1 : découvrir le dataset
+
+| Problème rencontré | Options | Choix | Justification |
+|---|---|---|---|
+| Quel dataset Kaggle prendre ? | indice seul (^GSPC), un fichier par entreprise, un fichier unique par titre et par jour | un fichier unique par titre et par jour : *à compléter (nom du dataset)* | L'indice seul n'a pas de ticker : impossible de construire `master.security`. Un fichier unique se charge en une fois |
+| Quelle 2ᵉ source pour décrire les titres ? | la liste du dataset Kaggle, Wikipédia, la liste datahub.io | `constituents.csv` de datahub.io | Elle contient le CIK, la clé du lien avec `master.company` de Finance. Format CSV ouvert et stable |
+| Quelle clé métier pour un titre ? | le nom, le CIK, le ticker | le ticker | Le CIK identifie l'entreprise, pas le titre : GOOGL et GOOG ont le même CIK. Le nom change, le ticker très rarement |
+| `BRK.B` dans la liste, une autre écriture dans les cours ? | *à compléter (résultat de `explore_sp500.py`)* | standardiser au MDM | Voir étape 5 |
+
+### Étape 2 : charger les données brutes
+
+| Problème rencontré | Options | Choix | Justification |
+|---|---|---|---|
+| Typer les colonnes au chargement ? | laisser pandas deviner, tout en texte | tout en texte (`dtype=str`) | Copie fidèle de la source. Une date ou un prix mal formé n'est pas perdu sans bruit : on le compte au MDM |
+| Le fichier des cours fait plusieurs millions de lignes | tout charger en mémoire, lire par morceaux | morceaux de 200 000 lignes | Évite de saturer la mémoire d'un PC portable |
+| Les noms de colonnes changent d'un dataset Kaggle à l'autre (`Symbol`, `Ticker`, `Name`, `Adj Close`) | adapter le SQL à chaque fois, harmoniser les noms | harmoniser les **noms** (snake_case, ticker → `symbol`), jamais les **valeurs** | Le MDM reste le même quel que soit le dataset. La règle « aucune correction » porte sur les valeurs |
+| Filtrer les dates pour aller plus vite ? | tout charger, `DATE_MIN` | *à compléter* | Si un filtre est utilisé, il est noté dans la fiche catalogue (métadonnée opérationnelle) |
+| Les sources simulées (produits, investisseurs) | les charger directement dans `master`, passer par `data.*_raw` | `data.*_raw` | Même règle pour toutes les sources : garder la version d'origine pour tracer et rejouer le MDM |
+
+### Étape 3 : documenter
+
+| Problème rencontré | Options | Choix | Justification |
+|---|---|---|---|
+| Le dataset contient-il des PII ? | Oui, Non | Non | Des cours de bourse et des noms de sociétés cotées. Les investisseurs sont des institutions (personnes morales) |
+| Documenter 3 sources | une fiche commune, une fiche par source | une fiche par source, dans le même fichier | Même owner et même classification, mais origine, fréquence et volumétrie différentes (même choix que Finance) |
+| `adj_close` absent de certains datasets | ne pas la documenter, la documenter comme facultative | la documenter, « peut être vide » | C'est la colonne utile pour calculer la volatilité en partie 2 |
+
+### Étape 4 : cataloguer dans OpenMetadata
+
+| Problème rencontré | Options | Choix | Justification |
+|---|---|---|---|
+| Configurer OpenMetadata comme les autres membres | à la main, avec le script commun | `scripts/setup_openmetadata.py` du membre Finance | Catalogue identique sur les 3 machines |
+| Quels schémas ingérer ? | tous, `data`, `master`, `ref` | `data`, `master`, `ref` | `gov` contiendra les règles d'accès : il ne doit pas être visible de tous (même choix que Finance) |
+| Classification de `master.security` | Medium comme le dataset, Low comme le propose le TP | *à décider en équipe* | La classification s'applique table par table. Un référentiel de tickers publics est moins sensible que l'historique complet |
+
+### Étape 5 : construire le MDM
 
 | Problème rencontré | Options | Choix | Justification |
 |---|---|---|---|
@@ -63,6 +102,7 @@ Les colonnes `risk_profile_source` et `risk_profile_date` indiquent d'où vient 
 | Un investisseur a rempli deux questionnaires | le premier, le plus récent | le plus récent | Le profil de risque d'un client évolue : seul le dernier compte |
 | Codes et valeurs mal écrits (`inv-002 `, `low`) | rejeter la ligne, ou standardiser | standardiser (`UPPER`, `TRIM`, `INITCAP`) | La valeur est juste, seule l'écriture diffère |
 | Questionnaire de plus de 2 ans (INV-005) | l'utiliser quand même, ou l'ignorer | l'utiliser et le signaler (contrôle Q9) | C'est la meilleure information disponible. Le Steward demande son renouvellement |
+| Pays `SN` (Sénégal, INV-006) absent de `ref.country` | le corriger soi-même, mettre le pays à NULL, signaler | signaler (contrôle Q10) et demander au membre Finance d'ajouter `SN` | `ref.country` appartient à Finance (contrat) : on ne modifie pas le référentiel d'un autre membre, et on ne perd pas une valeur juste |
 | Classification des investisseurs | Confidential avec PII, ou Internal | Internal, pas de PII | Ce sont des institutions (personnes morales). On ne collecte pas de clients particuliers : on ne garde que ce dont on a besoin |
 
 ## Contrôles qualité (`sql/22_investment_quality.sql`)
@@ -75,3 +115,4 @@ Les colonnes `risk_profile_source` et `risk_profile_date` indiquent d'où vient 
 | Q4 | Part des titres de l'indice reliés à une entreprise Finance, et relations 1-N |
 | Q5, Q6 | Doublons et cours incohérents (prix négatif, plus haut inférieur au plus bas) |
 | Q7 à Q9 | Profil de risque des investisseurs : complétude, désaccords entre sources, ancienneté |
+| Q10 | Pays des investisseurs présent dans `ref.country` (référentiel commun) |

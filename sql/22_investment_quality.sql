@@ -56,3 +56,20 @@ WHERE INITCAP(TRIM(c.risk_profile)) <> i.risk_profile;
 SELECT code, name, risk_profile, risk_profile_source, risk_profile_date
 FROM master.investor
 WHERE risk_profile_date < CURRENT_DATE - INTERVAL '2 years';
+
+-- Q10. Investor : le pays doit exister dans ref.country (referentiel commun du membre Finance)
+-- Chaque code inconnu est signale par un NOTICE. Rien n'est verifie si ref.country n'existe pas.
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  IF to_regclass('ref.country') IS NULL THEN
+    RAISE NOTICE 'Q10 : ref.country absent, rejouer sql/11_finance_mdm.sql du membre Finance';
+    RETURN;
+  END IF;
+  FOR r IN SELECT i.code, i.country FROM master.investor i
+           LEFT JOIN ref.country c ON c.code = i.country
+           WHERE i.country IS NOT NULL AND c.code IS NULL LOOP
+    RAISE NOTICE 'Q10 : investisseur % : pays % absent de ref.country', r.code, r.country;
+  END LOOP;
+END $$;
