@@ -1,0 +1,7 @@
+code,label,category,risk_level
+FND-US-EQ,Fonds Actions US,Equity Fund,High
+FND-US-TECH,Fonds Technologie US,Equity Fund,High
+FND-DIV,Fonds Dividendes,Equity Fund,Medium
+FND-BAL,Fonds Equilibre,Balanced Fund,Medium
+MAND-PRUD,Mandat Prudent,Discretionary Mandate,Low
+MAND-DYN,Mandat Dynamique,Discretionary Mandate,High

@@ -1,0 +1,7 @@
+code,name,investor_type,country,risk_profile,updated_on
+INV-001,Caisse de Retraite Atlas,Pension Fund,MA,Low,2025-06-10
+INV-002,Assurances Horizon,Insurance,MA,Medium,2025-03-02
+INV-003,Banque Meridien,Bank,FR,Medium,2024-11-20
+INV-004,Family Office Cedre,Family Office,MA,Medium,2025-01-15
+INV-005,Fondation Oasis,Foundation,MA,Low,2025-09-01
+INV-006,Mutuelle Sahel,Insurance,SN,Medium,2025-04-12
