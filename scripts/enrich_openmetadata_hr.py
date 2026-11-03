@@ -1,4 +1,4 @@
-# Enrichissement des tables RH dans OpenMetadata (TP3 etape 4).
+# Enrichissement des tables RH dans OpenMetadata (TP3 etapes 4 et 5.6).
 # Reprend la fiche catalogue et le dictionnaire de docs/dictionnaire/ibm_hr_analytics.md.
 # Pre-requis : scripts/setup_openmetadata.py execute (classifications, equipe, domaine,
 # glossaire, ingestion du service gouv_postgres).
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 OM = os.getenv("OM_URL", "http://localhost:8585") + "/api/v1"
-PREFIX = "gouv_postgres.governance.data."
+PREFIX = "gouv_postgres.governance."
 
 
 def call(method, path, body=None, token=None, content_type="application/json"):
@@ -61,22 +61,89 @@ for name, description in TERMS.items():
         "owners": [{"id": team["id"], "type": "team"}]}, token)["fullyQualifiedName"]
     print("terme :", name)
 
-# 2. Tables : description (fiche catalogue), owner, domaine, classification
+# 2. Tables : description (fiche catalogue), owner, domaine, classification, terme
+# La classification se decide table par table : les personnes sont Confidential,
+# l'organisation et les codes sont Internal
+CONFIDENTIAL = ["Confidentialite.Confidential", "Sensibilite.High"]
+INTERNAL = ["Confidentialite.Internal", "Sensibilite.Low"]
 TABLES = {
-    "hr_employee_raw": (
+    "data.hr_employee_raw": (
         "Copie brute du dataset IBM HR Analytics (Kaggle, fictif, traite comme reel) : "
         "photo de 1 470 employes avec poste, departement, formation, remuneration, "
         "satisfaction, performance, anciennete et depart (attrition). Tout en texte, "
         "aucune correction. Contient des PII : ne jamais exposer une ligne individuelle "
-        "hors Direction RH.",
-        ["Confidentialite.Confidential", "Sensibilite.High"]),
+        "hors Direction RH.", CONFIDENTIAL, None),
+    "data.hr_mobility_raw": (
+        "Copie brute de la mobilite interne (donnees simulees) : changements de departement "
+        "et de poste avec leur date d'effet. Deuxieme source du MDM Ressources humaines.",
+        ["Confidentialite.Confidential", "Sensibilite.Medium"], None),
+    "data.hr_office_raw": (
+        "Copie brute des sites de l'entreprise (donnees simulees).", INTERNAL, None),
+    "master.employee": (
+        "Golden Record des employes : une ligne par matricule, attributs maitres seulement "
+        "(genre, situation familiale, departement, poste, niveau, formation). Regle de "
+        "priorite : pour le departement et le poste, la mobilite la plus recente gagne sur "
+        "le fichier IBM HR. department_source et job_role_source indiquent la source "
+        "gagnante. Contient des PII (genre, situation familiale).", CONFIDENTIAL, "Employee"),
+    "data.hr_employee_facts": (
+        "Faits RH par employe (age, remuneration, satisfaction, performance, anciennete, "
+        "attrition), relies a master.employee par employee_id. Contient des PII (age, "
+        "salaires) : seuls des agregats peuvent sortir de la Direction RH.",
+        CONFIDENTIAL, None),
+    "master.department": (
+        "Referentiel des departements (3), chacun rattache a un site.", INTERNAL, "Department"),
+    "master.job_role": (
+        "Referentiel des postes (9), independant du departement : Manager existe dans les "
+        "3 departements.", INTERNAL, None),
+    "master.education_field": ("Referentiel des filieres d'etudes (6).", INTERNAL, None),
+    "master.office": (
+        "Referentiel des sites de l'entreprise. Donnees simulees (le dataset IBM HR ne "
+        "contient aucun lieu).", INTERNAL, None),
+    "ref.education_level": (
+        "Signification officielle du code education : 1 = Below College a 5 = Doctor.",
+        INTERNAL, None),
+    "ref.satisfaction_level": (
+        "Signification officielle des codes de satisfaction et d'implication : "
+        "1 = Low a 4 = Very High.", INTERNAL, None),
+    "ref.performance_rating": (
+        "Signification officielle du code performance_rating : 1 = Low a 4 = Outstanding.",
+        INTERNAL, "Performance Rating"),
+    "ref.work_life_balance": (
+        "Signification officielle du code work_life_balance : 1 = Bad a 4 = Best.",
+        INTERNAL, None),
 }
 
 # 3. Colonnes : description (dictionnaire), tag PII, terme de glossaire
 # PII.Sensitive : identifiant direct, quasi-identifiant ou remuneration
 # PII.NonSensitive : ne designe personne a lui seul
 COLUMNS = {
-    "hr_employee_raw": {
+    "master.employee": {
+        "employee_number": ("Matricule, cle metier du Golden Record. Identifiant direct.",
+                            "PII.Sensitive", "Employee"),
+        "gender": ("Genre declare de l'employe. Quasi-identifiant.", "PII.Sensitive", None),
+        "marital_status": ("Situation familiale de l'employe. Quasi-identifiant.",
+                           "PII.Sensitive", None),
+        "department_source": ("Source gagnante pour le departement : IBM_HR ou MOBILITY.",
+                              None, None),
+        "job_role_source": ("Source gagnante pour le poste : IBM_HR ou MOBILITY.", None, None),
+    },
+    "data.hr_employee_facts": {
+        "age": ("Age de l'employe a la date de la photo. Quasi-identifiant.",
+                "PII.Sensitive", None),
+        "monthly_income": ("Remuneration brute mensuelle, en USD. Ne doit jamais etre "
+                           "communiquee individuellement hors Direction RH.",
+                           "PII.Sensitive", None),
+        "daily_rate": ("Cout journalier de l'employe, en USD.", "PII.Sensitive", None),
+        "hourly_rate": ("Cout horaire de l'employe, en USD.", "PII.Sensitive", None),
+        "monthly_rate": ("Cout mensuel de l'employe, en USD.", "PII.Sensitive", None),
+        "attrition": ("Vrai si l'employe a quitte l'entreprise. A communiquer en taux "
+                      "agrege seulement.", "PII.NonSensitive", "Attrition"),
+    },
+    "data.hr_mobility_raw": {
+        "employee_number": ("Matricule de l'employe qui change de poste.",
+                            "PII.Sensitive", "Employee"),
+    },
+    "data.hr_employee_raw": {
         "employee_number": ("Matricule : numero unique attribue a l'employe par l'entreprise. "
                             "Identifiant direct.", "PII.Sensitive", "Employee"),
         "age": ("Age de l'employe a la date de la photo (18 a 60 ans). Quasi-identifiant.",
@@ -113,14 +180,17 @@ COLUMNS = {
     },
 }
 
-for table, (description, table_tags) in TABLES.items():
+for table, (description, table_tags, table_term) in TABLES.items():
     t = call("GET", f"/tables/name/{PREFIX}{table}?fields=columns,tags,owners,domains",
              token=token)
+    tags = [label(fqn) for fqn in table_tags]
+    if table_term:
+        tags.append(label(terms[table_term], source="Glossary"))
     ops = [
         {"op": "add", "path": "/description", "value": description},
         {"op": "add", "path": "/owners", "value": [{"id": team["id"], "type": "team"}]},
         {"op": "add", "path": "/domains", "value": [{"id": domain["id"], "type": "domain"}]},
-        {"op": "add", "path": "/tags", "value": [label(fqn) for fqn in table_tags]},
+        {"op": "add", "path": "/tags", "value": tags},
     ]
     for i, col in enumerate(t["columns"]):
         if col["name"] in COLUMNS.get(table, {}):
