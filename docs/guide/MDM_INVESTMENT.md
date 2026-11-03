@@ -122,7 +122,7 @@ Dataset retenu : Kaggle « S&P 500 Stocks: 25 Years of Data (Updated Daily) » (
 | Investisseurs : profil venu du questionnaire / du CRM | 5 / 1 |
 | Désaccords CRM / questionnaire | 3 (INV-002, INV-003, INV-004) |
 | Questionnaires à renouveler (plus de 2 ans) | 1 (INV-005) |
-| Titres reliés à `master.company` | à mesurer après le MDM Finance (`sql/11_finance_mdm.sql`) |
+| Titres reliés à `master.company` (Finance, par le CIK) | 503 sur 503 (100 %), avec les 8 477 entreprises du MDM Finance |
 
 ## Contrôles qualité (`sql/22_investment_quality.sql`)
 
