@@ -53,16 +53,16 @@ Les colonnes `risk_profile_source` et `risk_profile_date` indiquent d'où vient 
 
 ## Décisions par étape
 
-Les lignes marquées *à compléter* dépendent du fichier Kaggle retenu par l'équipe.
+Dataset retenu : Kaggle « S&P 500 Stocks: 25 Years of Data (Updated Daily) » (darkmatternet), fichier `sp500_stocks.csv`, chargé le 2026-11-03.
 
 ### Étape 1 : découvrir le dataset
 
 | Problème rencontré | Options | Choix | Justification |
 |---|---|---|---|
-| Quel dataset Kaggle prendre ? | indice seul (^GSPC), un fichier par entreprise, un fichier unique par titre et par jour | un fichier unique par titre et par jour : *à compléter (nom du dataset)* | L'indice seul n'a pas de ticker : impossible de construire `master.security`. Un fichier unique se charge en une fois |
-| Quelle 2ᵉ source pour décrire les titres ? | la liste du dataset Kaggle, Wikipédia, la liste datahub.io | `constituents.csv` de datahub.io | Elle contient le CIK, la clé du lien avec `master.company` de Finance. Format CSV ouvert et stable |
+| Quel dataset Kaggle prendre ? | indice seul (^GSPC), un fichier par entreprise, un fichier unique par titre et par jour | « S&P 500 Stocks: 25 Years of Data » : un fichier unique, 2 948 439 lignes, 502 tickers, 2000-01-03 au 2026-10-30 | L'indice seul n'a pas de ticker : impossible de construire `master.security`. Un fichier unique se charge en une fois. 25 ans d'historique, mis à jour chaque jour |
+| Quelle 2ᵉ source pour décrire les titres ? | la liste du dataset Kaggle (`sp500_companies.csv`), Wikipédia, la liste datahub.io | `constituents.csv` de datahub.io | La liste Kaggle n'a pas de CIK. Celle de datahub.io contient le CIK, la clé du lien avec `master.company` de Finance. Format CSV ouvert et stable |
 | Quelle clé métier pour un titre ? | le nom, le CIK, le ticker | le ticker | Le CIK identifie l'entreprise, pas le titre : GOOGL et GOOG ont le même CIK. Le nom change, le ticker très rarement |
-| `BRK.B` dans la liste, une autre écriture dans les cours ? | *à compléter (résultat de `explore_sp500.py`)* | standardiser au MDM | Voir étape 5 |
+| `BRK.B` dans la liste, `BRK-B` dans les cours (idem `BF.B` et `BF-B`) | comparer tel quel, standardiser | standardiser au MDM | Mesuré par `explore_sp500.py`. Voir étape 5 |
 
 ### Étape 2 : charger les données brutes
 
@@ -71,7 +71,7 @@ Les lignes marquées *à compléter* dépendent du fichier Kaggle retenu par l'�
 | Typer les colonnes au chargement ? | laisser pandas deviner, tout en texte | tout en texte (`dtype=str`) | Copie fidèle de la source. Une date ou un prix mal formé n'est pas perdu sans bruit : on le compte au MDM |
 | Le fichier des cours fait plusieurs millions de lignes | tout charger en mémoire, lire par morceaux | morceaux de 200 000 lignes | Évite de saturer la mémoire d'un PC portable |
 | Les noms de colonnes changent d'un dataset Kaggle à l'autre (`Symbol`, `Ticker`, `Name`, `Adj Close`) | adapter le SQL à chaque fois, harmoniser les noms | harmoniser les **noms** (snake_case, ticker → `symbol`), jamais les **valeurs** | Le MDM reste le même quel que soit le dataset. La règle « aucune correction » porte sur les valeurs |
-| Filtrer les dates pour aller plus vite ? | tout charger, `DATE_MIN` | *à compléter* | Si un filtre est utilisé, il est noté dans la fiche catalogue (métadonnée opérationnelle) |
+| Filtrer les dates pour aller plus vite ? | tout charger, `DATE_MIN` | tout charger | 2,9 millions de lignes se chargent en quelques minutes. La volatilité demande un historique long |
 | Les sources simulées (produits, investisseurs) | les charger directement dans `master`, passer par `data.*_raw` | `data.*_raw` | Même règle pour toutes les sources : garder la version d'origine pour tracer et rejouer le MDM |
 
 ### Étape 3 : documenter
@@ -98,12 +98,31 @@ Les lignes marquées *à compléter* dépendent du fichier Kaggle retenu par l'�
 | Une entreprise émet plusieurs titres (Alphabet : GOOGL et GOOG) | une ligne par entreprise, ou par titre | une ligne par titre, reliée à `master.company` par le CIK | L'entreprise est le golden record de Finance. Nous gérons le titre : relation 1-N |
 | Les titres sortis de l'indice n'ont ni nom ni CIK | les supprimer, les garder vides, chercher une 3ᵉ source | 3ᵉ source : la liste des tickers SEC chargée par Finance | On complète à la source sans créer de nouveau téléchargement, et on garde la trace (`SEC_TICKERS`) |
 | Un ticker abandonné peut être réattribué à une autre société | ignorer, ou signaler | signaler (point ouvert) | Le nom venu de la SEC pour un ancien titre peut être celui du nouveau propriétaire du ticker |
+| Le dataset Kaggle ne contient que les membres actuels (biais du survivant) : la source 2 n'ajoute aucune fiche | changer de dataset, garder la règle et signaler | garder la règle et signaler | La règle de priorité reste juste et servira avec un dataset qui contient les anciens membres. L'Investment Agent doit savoir que l'historique ignore les sociétés disparues |
 | `master.investor` n'avait qu'une source | rester à 1 source, ajouter une 2ᵉ | 2ᵉ source simulée : le questionnaire de risque | Sans 2 sources, pas de rapprochement ni de règle de priorité. Le profil de risque est l'exemple donné par la prof |
 | Un investisseur a rempli deux questionnaires | le premier, le plus récent | le plus récent | Le profil de risque d'un client évolue : seul le dernier compte |
 | Codes et valeurs mal écrits (`inv-002 `, `low`) | rejeter la ligne, ou standardiser | standardiser (`UPPER`, `TRIM`, `INITCAP`) | La valeur est juste, seule l'écriture diffère |
 | Questionnaire de plus de 2 ans (INV-005) | l'utiliser quand même, ou l'ignorer | l'utiliser et le signaler (contrôle Q9) | C'est la meilleure information disponible. Le Steward demande son renouvellement |
 | Pays `SN` (Sénégal, INV-006) absent de `ref.country` | le corriger soi-même, mettre le pays à NULL, signaler | signaler (contrôle Q10) et demander au membre Finance d'ajouter `SN` | `ref.country` appartient à Finance (contrat) : on ne modifie pas le référentiel d'un autre membre, et on ne perd pas une valeur juste |
 | Classification des investisseurs | Confidential avec PII, ou Internal | Internal, pas de PII | Ce sont des institutions (personnes morales). On ne collecte pas de clients particuliers : on ne garde que ce dont on a besoin |
+
+## Résultats (chargement du 2026-11-03)
+
+| Mesure | Valeur |
+|---|---|
+| Cours chargés (`data.sp500_prices_raw`) | 2 948 439 lignes, 502 tickers, du 2000-01-03 au 2026-10-30 |
+| Titres dans `master.security` | 503 (tous issus de la liste officielle) |
+| Variantes fusionnées par la standardisation | 2 : `BRK.B`/`BRK-B`, `BF.B`/`BF-B` |
+| Doublons de ticker | 0 |
+| Complétude nom, secteur, CIK | 100 % |
+| Cours reliés au golden record (`data.market_prices`) | 2 948 439 (100 %) |
+| Doublons de cours, prix incohérents, clôtures vides | 0 |
+| Titre de la liste sans aucun cours | 1 : FactSet (`FDS`) |
+| Entreprises émettant 2 titres | 3 : Alphabet, News Corp, Fox |
+| Investisseurs : profil venu du questionnaire / du CRM | 5 / 1 |
+| Désaccords CRM / questionnaire | 3 (INV-002, INV-003, INV-004) |
+| Questionnaires à renouveler (plus de 2 ans) | 1 (INV-005) |
+| Titres reliés à `master.company` | à mesurer après le MDM Finance (`sql/11_finance_mdm.sql`) |
 
 ## Contrôles qualité (`sql/22_investment_quality.sql`)
 

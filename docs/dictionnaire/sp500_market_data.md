@@ -4,7 +4,7 @@ Fiche catalogue et dictionnaire de données du dataset Investment (membre Invest
 Le dataset a deux sources : l'historique des cours (fiche 1) et la liste officielle des membres du S&P 500 (fiche 2).
 Le MDM Produits utilise aussi deux sources simulées pour les investisseurs (fiche 3).
 
-Les valeurs `...` sont à compléter après le chargement de l'historique des cours (`scripts/load_sp500.py`).
+Volumétries mesurées au chargement du 2026-11-03.
 
 ## Fiche 1 : historique des cours
 
@@ -15,11 +15,11 @@ Les valeurs `...` sont à compléter après le chargement de l'historique des co
 | Métier | Domaine | Investissement |
 | Technique | Table | `data.sp500_prices_raw` |
 | Technique | Format source | CSV, séparateur virgule, tout chargé en texte |
-| Opérationnelle | Source | Kaggle, dataset « S&P 500 Historical Market Data » : ... (nom exact du fichier) |
-| Opérationnelle | Période couverte | du ... au ... |
-| Opérationnelle | Date de chargement | ..., script `scripts/load_sp500.py` |
-| Opérationnelle | Volumétrie | ... lignes, ... tickers distincts |
-| Opérationnelle | Filtre appliqué | aucun / à partir du ... (si `DATE_MIN` utilisé) |
+| Opérationnelle | Source | Kaggle, « S&P 500 Stocks: 25 Years of Data (Updated Daily) » (darkmatternet), fichier `sp500_stocks.csv` |
+| Opérationnelle | Période couverte | du 2000-01-03 au 2026-10-30 |
+| Opérationnelle | Date de chargement | 2026-11-03, script `scripts/load_sp500.py` |
+| Opérationnelle | Volumétrie | 2 948 439 lignes, 502 tickers distincts |
+| Opérationnelle | Filtre appliqué | Aucun (`DATE_MIN` non utilisé) |
 | Gouvernance | Data Owner | Direction Investissement |
 | Gouvernance | Data Steward | Ivan (membre Investment) |
 | Gouvernance | Classification | Internal |
@@ -37,7 +37,7 @@ Les valeurs `...` sont à compléter après le chargement de l'historique des co
 | Technique | Format source | CSV, séparateur virgule, encodage UTF-8, tout chargé en texte |
 | Opérationnelle | Source | datahub.io, https://datahub.io/core/s-and-p-500-companies |
 | Opérationnelle | Fréquence de mise à jour | À chaque changement de composition de l'indice (côté source) |
-| Opérationnelle | Date de chargement | ..., script `scripts/load_sp500.py` |
+| Opérationnelle | Date de chargement | 2026-11-03, script `scripts/load_sp500.py` |
 | Opérationnelle | Volumétrie | 503 lignes, 503 tickers, 500 CIK distincts, 11 secteurs GICS |
 | Opérationnelle | Filtre appliqué | Aucun |
 | Gouvernance | Data Owner | Direction Investissement |
@@ -69,13 +69,14 @@ Les valeurs `...` sont à compléter après le chargement de l'historique des co
 | Nom physique | Nom métier | Définition | Type | Contraintes | Valeurs admises | Règle de gestion | PII |
 |---|---|---|---|---|---|---|---|
 | `date` | Date de séance | Jour de bourse auquel se rapportent les cours de la ligne | Date | NOT NULL | Jours ouvrés de la bourse de New York, format `YYYY-MM-DD` | Doit être unique pour un même titre | Non |
-| `symbol` | Ticker | Code court qui identifie un titre en bourse | Texte | NOT NULL | Lettres majuscules, un point ou un tiret pour les classes d'action (`BRK.B`, `BRK-B`) | Doit exister dans `master.security` après standardisation | Non |
-| `open` | Cours d'ouverture | Premier prix auquel le titre s'est échangé pendant la séance | Décimal (4 décimales) | Peut être vide | Nombre strictement positif, en USD | Doit être compris entre `low` et `high` du même jour | Non |
+| `symbol` | Ticker | Code court qui identifie un titre en bourse | Texte | NOT NULL | Lettres majuscules, un tiret pour les classes d'action dans ce fichier (`BRK-B`, `BF-B`) | Doit exister dans `master.security` après standardisation | Non |
+| `open` | Cours d'ouverture | Premier prix auquel le titre s'est échangé pendant la séance | Décimal (4 décimales) | Peut être vide (aucun vide mesuré) | Nombre strictement positif, en USD | Doit être compris entre `low` et `high` du même jour | Non |
 | `high` | Plus haut du jour | Prix le plus élevé atteint par le titre pendant la séance | Décimal (4 décimales) | Peut être vide | Nombre strictement positif, en USD | Doit être supérieur ou égal à `low` | Non |
 | `low` | Plus bas du jour | Prix le plus bas atteint par le titre pendant la séance | Décimal (4 décimales) | Peut être vide | Nombre strictement positif, en USD | Doit être inférieur ou égal à `high` | Non |
 | `close` | Cours de clôture | Dernier prix auquel le titre s'est échangé pendant la séance | Décimal (4 décimales) | NOT NULL | Nombre strictement positif, en USD | Doit être compris entre `low` et `high` du même jour | Non |
-| `adj_close` | Cours de clôture ajusté | Cours de clôture corrigé des dividendes et des divisions d'actions, pour comparer des prix d'époques différentes | Décimal (4 décimales) | Peut être vide (absente de certains datasets) | Nombre strictement positif, en USD | Doit servir au calcul des rendements et de la volatilité | Non |
-| `volume` | Volume échangé | Nombre d'actions échangées pendant la séance | Entier | Peut être vide | Entier positif ou nul | Doit être un nombre entier d'actions | Non |
+| `volume` | Volume échangé | Nombre d'actions échangées pendant la séance | Entier (écrit `4674353.0` dans la source) | Peut être vide | Entier positif ou nul (6 493 séances à 0) | Doit être un nombre entier d'actions | Non |
+
+Ce fichier n'a pas de colonne `adj_close` (cours ajusté des dividendes et divisions d'actions). Les prix semblent déjà ajustés (Agilent à 42,79 USD le 2000-01-03), point à confirmer avant de calculer la volatilité en partie 2.
 
 ### Table `data.sp500_constituents_raw` (une société de l'indice par ligne)
 
@@ -91,5 +92,7 @@ Les valeurs `...` sont à compléter après le chargement de l'historique des co
 
 - **Clé métier** : le ticker, après standardisation (majuscules, sans espaces, `.` remplacé par `-`). Sans cela, `BRK.B` et `BRK-B` créeraient deux fiches pour Berkshire Hathaway.
 - **Relation 1-N avec Finance** : 503 tickers pour 500 CIK. Trois entreprises émettent deux titres : Alphabet (`GOOGL`, `GOOG`), News Corp (`NWSA`, `NWS`), Fox (`FOXA`, `FOX`). Le golden record `master.security` a donc une ligne par titre, et plusieurs titres pointent vers la même ligne de `master.company`.
-- **Titres sortis de l'indice** : ils sont dans l'historique des cours, mais pas dans la liste actuelle. Ils n'ont ni nom ni secteur dans nos deux sources. La liste des tickers de la SEC (chargée par Finance) leur apporte un nom et un CIK quand le ticker existe encore.
-- **Point ouvert** : un ticker abandonné peut être réattribué à une autre société. Le nom et le CIK venus de la SEC pour un ancien titre sont donc à vérifier (colonne `name_source = SEC_TICKERS`).
+- **Rapprochement des deux sources** : les 502 tickers des cours existent tous dans la liste officielle après standardisation (2 cas : `BRK.B`/`BRK-B`, `BF.B`/`BF-B`). Les 2 948 439 cours sont reliés à `master.security`. Un seul titre de la liste n'a aucun cours : FactSet (`FDS`).
+- **Biais du survivant** : le dataset Kaggle ne contient que les membres **actuels** de l'indice, même pour les années 2000. Aucun titre sorti de l'indice n'apparaît, donc la source 2 n'ajoute aucune fiche. La règle de priorité reste en place pour un futur dataset qui contiendrait les anciens membres. Un historique sans les sociétés disparues surestime la performance passée de l'indice : à signaler à l'Investment Agent.
+- **Liste Kaggle non retenue** : le dataset contient aussi `sp500_companies.csv` (nom, secteur), mais sans CIK. Elle ne permet pas le lien avec `master.company` : on garde `constituents.csv` comme source prioritaire.
+- **Entrées récentes** : certains titres ont un historique très court parce qu'ils viennent d'être cotés (`VYLR` depuis le 2026-10-01). La volatilité sur 12 mois n'est pas calculable pour eux.
