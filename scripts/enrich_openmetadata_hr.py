@@ -180,9 +180,11 @@ COLUMNS = {
     },
 }
 
+table_ids = {}
 for table, (description, table_tags, table_term) in TABLES.items():
     t = call("GET", f"/tables/name/{PREFIX}{table}?fields=columns,tags,owners,domains",
              token=token)
+    table_ids[table] = t["id"]
     tags = [label(fqn) for fqn in table_tags]
     if table_term:
         tags.append(label(terms[table_term], source="Glossary"))
@@ -203,3 +205,20 @@ for table, (description, table_tags, table_term) in TABLES.items():
             ops.append({"op": "add", "path": f"/columns/{i}/tags", "value": col_tags})
     call("PATCH", f"/tables/{t['id']}", ops, token, "application/json-patch+json")
     print("table enrichie :", table)
+
+# 4. Lignage : de quelles tables chaque table est construite (sql/31_hr_mdm.sql)
+LINEAGE = [
+    ("data.hr_employee_raw", "master.department"),
+    ("data.hr_employee_raw", "master.job_role"),
+    ("data.hr_employee_raw", "master.education_field"),
+    ("data.hr_office_raw", "master.office"),
+    ("data.hr_employee_raw", "master.employee"),
+    ("data.hr_mobility_raw", "master.employee"),
+    ("master.employee", "data.hr_employee_facts"),
+    ("data.hr_employee_raw", "data.hr_employee_facts"),
+]
+for source, target in LINEAGE:
+    call("PUT", "/lineage", {"edge": {
+        "fromEntity": {"id": table_ids[source], "type": "table"},
+        "toEntity": {"id": table_ids[target], "type": "table"}}}, token)
+    print("lignage :", source, "->", target)
