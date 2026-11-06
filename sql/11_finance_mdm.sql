@@ -212,3 +212,18 @@ JOIN data.sec_sub_raw s ON s.adsh = n.adsh
 JOIN master.company c   ON c.cik = LPAD(s.cik, 10, '0')
 JOIN master.xbrl_account x ON x.tag = n.tag
 WHERE n.value IS NOT NULL;
+
+-- 5. Libelles des 10 codes SIC les plus frequents sans libelle (controle Q6) -----
+UPDATE ref.sic r SET label = v.label
+FROM (VALUES
+  ('6111', 'Federal & Federally-Sponsored Credit Agencies'),
+  ('4213', 'Trucking (No Local)'),
+  ('6324', 'Hospital & Medical Service Plans'),
+  ('6351', 'Surety Insurance'),
+  ('3561', 'Pumps & Pumping Equipment'),
+  ('6162', 'Mortgage Bankers & Loan Correspondents'),
+  ('8062', 'Services-General Medical & Surgical Hospitals, NEC'),
+  ('1221', 'Bituminous Coal & Lignite Mining'),
+  ('3460', 'Metal Forgings & Stampings'),
+  ('7320', 'Services-Consumer Credit Reporting, Collection Agencies')) AS v(code, label)
+WHERE r.code = v.code AND r.label IS NULL;

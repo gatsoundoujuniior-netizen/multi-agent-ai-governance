@@ -9,6 +9,40 @@ catalogue OpenMetadata et un MDM Tiers et Structures. Projet HESTIM, cours Data 
 Un agent n'accede jamais directement aux donnees. Il demande a la Governance Engine,
 qui repond ALLOW ou DENY et ecrit chaque decision dans `gov.audit_log`.
 
+Pour realiser ou comprendre un MDM, commencer par le guide d'equipe :
+[docs/guide/GUIDE_MDM.md](docs/guide/GUIDE_MDM.md).
+
+## Avancement (partie 1)
+
+| Domaine | Membre | Branche | Etat |
+|---|---|---|---|
+| Finance, MDM Tiers et Structures | Junior | `finance` | MDM, controles qualite et catalogue faits, PR a ouvrir |
+| Investment, MDM Produits | Ivan | `investment` | Travail pousse sur la branche, PR a ouvrir |
+| HR, MDM Ressources humaines | Mohammed | `hr` | Travail pousse sur la branche, PR a ouvrir |
+
+### Resultats du MDM Finance (`master.company`)
+
+| Mesure | Resultat | Seuil |
+|---|---|---|
+| Entreprises | 8 485, une ligne par CIK, 0 doublon | |
+| Sources rapprochees sur le CIK | 3 : depots 10-K, liste des tickers, API EDGAR Submissions | au moins 2 |
+| Nom renseigne | 100 % | 95 % |
+| Pays renseigne | 98,81 % (49 % sans EDGAR) | 95 % |
+| Secteur SIC renseigne | 85,69 % : **sous le seuil**, point ouvert | 95 % |
+| Montants relies a une entreprise | 63 937 sur 64 253 lignes brutes (316 sans montant), 0 orphelin | |
+| Doublons de montants | 5, soit 0,01 % | 1 % |
+
+Regles de priorite, attribut par attribut : nom = tickers, puis 10-K, puis EDGAR ;
+pays et secteur = 10-K, puis EDGAR. Les colonnes `*_source` gardent la source gagnante.
+
+### Points ouverts cote Finance
+
+- Secteur sous le seuil : 1 214 entreprises sans code SIC, dont 1 035 de type `other` a la SEC.
+  Decision a prendre.
+- Code `0000` recu d'EDGAR pour 11 entreprises : il ne designe aucun secteur et compte
+  pour l'instant comme renseigne.
+- Libelles SIC : 47 codes restent sans libelle (104 entreprises).
+
 ## Les TP du projet (partie 1 : jusqu'au MDM)
 
 | TP | Pour qui | Fichier |
@@ -37,6 +71,17 @@ Executer un script SQL du projet :
 docker exec gouv_postgres psql -U gouv -d governance -v ON_ERROR_STOP=1 -f /sql/<fichier>.sql
 ```
 
+Reconstruire le MDM Finance, dans cet ordre (les datasets SEC doivent etre dans `data/raw/sec/`) :
+
+```powershell
+python scripts/load_sec.py                # depots 10-K, montants, plan de comptes, tickers
+python scripts/load_sec_submissions.py    # fiches EDGAR (telechargement, puis reprise possible)
+docker exec gouv_postgres psql -U gouv -d governance -v ON_ERROR_STOP=1 -f /sql/11_finance_mdm.sql
+docker exec gouv_postgres psql -U gouv -d governance -f /sql/12_finance_quality.sql
+python scripts/setup_openmetadata.py      # configuration commune et ingestion
+python scripts/enrich_openmetadata_finance.py   # catalogue, dictionnaire, glossaire, lignage
+```
+
 ## Conventions communes (decisions d'equipe, valeurs par defaut)
 
 | Sujet | Valeur |
@@ -59,6 +104,11 @@ docker exec gouv_postgres psql -U gouv -d governance -v ON_ERROR_STOP=1 -f /sql/
 | `ref.currency`, `ref.country` | Finance | Tous | `code`, `label` |
 | `ref.sector` (GICS) | Investment | Tous | `sector_id`, `label` |
 
+`master.company` contient une ligne par CIK. `country` et `sic_code` peuvent etre vides.
+Les colonnes `name_source`, `country_source`, `sic_source` et `updated_at` servent a la
+tracabilite et ne font pas partie du contrat. `ref.sic` et `ref.edgar_location` sont
+internes au MDM Finance.
+
 ## Arborescence
 
 ```
@@ -71,6 +121,7 @@ data/raw/                datasets telecharges (jamais dans Git)
 data/seed/               petites tables simulees (dans Git)
 docs/tp/                 les TP du projet, PDF et prompts
 docs/dictionnaire/       fiches catalogue et dictionnaires de donnees
+docs/guide/              guide d'equipe pour realiser son MDM
 policies/                regles d'acces en JSON (partie 2)
 governance_engine/       API FastAPI, le portier (partie 2)
 agents/                  agents LangGraph (partie 2)

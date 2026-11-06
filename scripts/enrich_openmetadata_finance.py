@@ -1,4 +1,4 @@
-# Enrichissement des tables Finance dans OpenMetadata (TP1 etape 4.2 et 4.3).
+# Enrichissement des tables Finance dans OpenMetadata (TP1 etapes 4.2, 4.3 et 5.6).
 # Reprend la fiche catalogue et le dictionnaire de docs/dictionnaire/sec_financial_statements.md.
 # Pre-requis : scripts/setup_openmetadata.py execute (classifications, equipe, domaine,
 # glossaire, ingestion du service gouv_postgres).
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 OM = os.getenv("OM_URL", "http://localhost:8585") + "/api/v1"
-PREFIX = "gouv_postgres.governance.data."
+PREFIX = "gouv_postgres.governance."
 
 
 def call(method, path, body=None, token=None, content_type="application/json"):
@@ -61,20 +61,43 @@ for name, description in TERMS.items():
         "owners": [{"id": team["id"], "type": "team"}]}, token)["fullyQualifiedName"]
     print("terme :", name)
 
-# 2. Tables : description (fiche catalogue), owner, domaine, classification
+# 2. Tables : description (fiche catalogue), classification
+# Les donnees de la SEC restent publiques. Un referentiel construit par nos regles est interne.
 DEPOTS = ("Rapports annuels (10-K) deposes aupres de la SEC par les societes cotees aux "
           "Etats-Unis, trimestre 2026q1. Filtre : 10-K, 8 tags us-gaap, USD, sans ventilation.")
+PUBLIC, INTERNAL = "Confidentialite.Public", "Confidentialite.Internal"
 TABLES = {
-    "sec_sub_raw": "Copie brute des depots 10-K (une ligne par rapport depose). " + DEPOTS,
-    "sec_num_raw": "Copie brute des montants financiers (une ligne par montant). " + DEPOTS,
-    "sec_tag_raw": "Copie brute du plan de comptes XBRL, limite aux 8 tags retenus. " + DEPOTS,
-    "sec_company_tickers_raw": "Copie brute de la liste officielle SEC CIK / ticker / nom, "
-                               "sans filtre. Deuxieme source du MDM Tiers et Structures.",
+    "data.sec_sub_raw": ("Copie brute des depots 10-K (une ligne par rapport depose). " + DEPOTS,
+                         PUBLIC),
+    "data.sec_num_raw": ("Copie brute des montants financiers (une ligne par montant). " + DEPOTS,
+                         PUBLIC),
+    "data.sec_tag_raw": ("Copie brute du plan de comptes XBRL, limite aux 8 tags retenus. " + DEPOTS,
+                         PUBLIC),
+    "data.sec_company_tickers_raw": ("Copie brute de la liste officielle SEC CIK / ticker / nom, "
+                                     "sans filtre. Deuxieme source du MDM Tiers et Structures.",
+                                     PUBLIC),
+    "data.sec_submissions_raw": ("Copie brute des fiches EDGAR Submissions (une ligne par "
+                                 "entreprise) pour les entreprises sans 10-K dans le trimestre. "
+                                 "Troisieme source du MDM Tiers et Structures.", PUBLIC),
+    "data.sec_financial_facts": ("Montants financiers (une ligne par montant), transactions "
+                                 "reliees au Golden Record par company_id. Les montants vides "
+                                 "de la source sont exclus.", PUBLIC),
+    "master.company": ("Golden Record des entreprises : une ligne par CIK, 3 sources SEC. "
+                       "Regle de priorite par attribut : nom = tickers puis 10-K puis EDGAR ; "
+                       "pays et secteur = 10-K puis EDGAR. Les colonnes *_source gardent la "
+                       "source gagnante.", INTERNAL),
+    "master.xbrl_account": ("Plan de comptes : les 8 tags us-gaap retenus, avec leur categorie.",
+                            INTERNAL),
+    "ref.country": ("Codes pays ISO a 2 lettres et leurs libelles.", PUBLIC),
+    "ref.currency": ("Codes devise et leurs libelles.", PUBLIC),
+    "ref.sic": ("Codes secteur SIC de la SEC et leurs libelles.", PUBLIC),
+    "ref.edgar_location": ("Traduction des codes de localisation EDGAR en codes pays ISO.", PUBLIC),
 }
+TABLE_TERMS = {"master.company": "Company"}
 
 # 3. Colonnes : description (dictionnaire), PII.NonSensitive, terme de glossaire
 COLUMNS = {
-    "sec_sub_raw": {
+    "data.sec_sub_raw": {
         "adsh": ("Numero unique attribue par la SEC a chaque rapport depose.", None),
         "cik": ("Identifiant unique de l'entreprise a la SEC, ecrit sans les zeros de tete "
                 "dans la source (a completer a 10 chiffres).", "CIK"),
@@ -82,29 +105,52 @@ COLUMNS = {
         "countryba": ("Pays du siege ou l'entreprise exerce son activite (code ISO 2 lettres).",
                       None),
     },
-    "sec_num_raw": {
+    "data.sec_num_raw": {
         "tag": ("Etiquette XBRL standard qui dit ce que mesure le montant.", "XBRL Tag"),
         "value": ("Montant declare par l'entreprise pour un poste et une date, "
                   "a lire avec uom et qtrs.", None),
         "qtrs": ("Nombre de trimestres couverts : 0 = montant a une date (bilan), "
                  "4 = montant sur un an.", None),
     },
-    "sec_company_tickers_raw": {
+    "data.sec_company_tickers_raw": {
         "cik_str": ("Identifiant SEC de l'entreprise, sans les zeros de tete.", "CIK"),
         "ticker": ("Symbole boursier, lien avec master.security (MDM Produits).", None),
         "title": ("Nom actuel de l'entreprise, tenu a jour par la SEC.", "Company"),
     },
+    "data.sec_submissions_raw": {
+        "cik": ("Identifiant SEC de l'entreprise, sans les zeros de tete.", "CIK"),
+        "name": ("Nom de l'entreprise dans sa fiche EDGAR.", "Company"),
+        "business_state_or_country": ("Code de localisation EDGAR du siege (Etat americain ou "
+                                      "code maison, ex. M0 = Japon).", None),
+    },
+    "master.company": {
+        "company_id": ("Cle technique du Golden Record, utilisee par les tables qui s'y relient.",
+                       None),
+        "cik": ("Cle metier : identifiant SEC sur 10 chiffres, sert au rapprochement des sources.",
+                "CIK"),
+        "legal_name": ("Nom retenu : tickers, puis 10-K, puis EDGAR.", "Company"),
+        "name_source": ("Source gagnante du nom : TICKERS, DEPOT_10K ou EDGAR.", None),
+        "country": ("Pays du siege en code ISO : 10-K, puis EDGAR. Vide si aucune source.", None),
+        "country_source": ("Source gagnante du pays : DEPOT_10K ou EDGAR.", None),
+        "sic_code": ("Code secteur SIC : 10-K, puis EDGAR. Vide si aucune source n'en donne.",
+                     None),
+        "sic_source": ("Source gagnante du secteur : DEPOT_10K ou EDGAR.", None),
+    },
 }
 
-for table, description in TABLES.items():
+table_ids = {}
+for table, (description, confidentiality) in TABLES.items():
     t = call("GET", f"/tables/name/{PREFIX}{table}?fields=columns,tags,owners,domains",
              token=token)
+    table_ids[table] = t["id"]
+    tags = [label(confidentiality), label("Sensibilite.Low")]
+    if table in TABLE_TERMS:
+        tags.append(label(terms[TABLE_TERMS[table]], source="Glossary"))
     ops = [
         {"op": "add", "path": "/description", "value": description},
         {"op": "add", "path": "/owners", "value": [{"id": team["id"], "type": "team"}]},
         {"op": "add", "path": "/domains", "value": [{"id": domain["id"], "type": "domain"}]},
-        {"op": "add", "path": "/tags", "value": [label("Confidentialite.Public"),
-                                                 label("Sensibilite.Low")]},
+        {"op": "add", "path": "/tags", "value": tags},
     ]
     for i, col in enumerate(t["columns"]):
         if col["name"] in COLUMNS.get(table, {}):
@@ -117,3 +163,19 @@ for table, description in TABLES.items():
             ops.append({"op": "add", "path": f"/columns/{i}/tags", "value": col_tags})
     call("PATCH", f"/tables/{t['id']}", ops, token, "application/json-patch+json")
     print("table enrichie :", table)
+
+# 4. Lignage : de quelles tables chaque table est construite (sql/11_finance_mdm.sql)
+LINEAGE = [
+    ("data.sec_sub_raw", "master.company"),
+    ("data.sec_company_tickers_raw", "master.company"),
+    ("data.sec_submissions_raw", "master.company"),
+    ("data.sec_tag_raw", "master.xbrl_account"),
+    ("master.company", "data.sec_financial_facts"),
+    ("master.xbrl_account", "data.sec_financial_facts"),
+    ("data.sec_num_raw", "data.sec_financial_facts"),
+]
+for source, target in LINEAGE:
+    call("PUT", "/lineage", {"edge": {
+        "fromEntity": {"id": table_ids[source], "type": "table"},
+        "toEntity": {"id": table_ids[target], "type": "table"}}}, token)
+    print("lignage :", source, "->", target)

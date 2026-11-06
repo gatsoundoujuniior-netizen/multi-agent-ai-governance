@@ -188,7 +188,7 @@ La **fiche catalogue** décrit le dataset entier. Le **dictionnaire** décrit ch
 
 | Attribut | Règle de priorité | Raison |
 |---|---|---|
-| Nom | liste des tickers, puis dépôt 10-K, puis EDGAR | `sub.txt` garde le nom au moment du dépôt. 107 entreprises ont changé de nom depuis (LendingClub est devenue Happen) |
+| Nom | liste des tickers, puis dépôt 10-K, puis EDGAR | `sub.txt` garde le nom au moment du dépôt. 117 entreprises ont un nom différent entre les deux sources (LendingClub est devenue Happen) |
 | Pays | dépôt 10-K, puis EDGAR (code traduit en ISO) | La liste des tickers n'a pas de pays |
 | Secteur (SIC) | dépôt 10-K, puis EDGAR | Idem |
 | Pour un même CIK dans `sub` | le dépôt le plus récent gagne | Une entreprise a déposé deux 10-K dans le trimestre |
@@ -213,14 +213,21 @@ Les colonnes `name_source`, `country_source` et `sic_source` indiquent la source
 | Pays renseigné | 98,8 % (49 % avec une seule source) |
 | Secteur renseigné | 85,7 % (point ouvert, voir ci-dessous) |
 | Comptes du plan XBRL (`master.xbrl_account`) | 8 |
-| Montants reliés au golden record | 63 937 |
+| Montants reliés au golden record | 63 937 sur 64 253 lignes brutes (316 lignes sans montant sont écartées) |
+| Doublons de montants | 5, soit 0,01 % (une seule entreprise, même valeur dans 2 dépôts) |
 
-**Points ouverts côté Finance** : les entreprises sans code SIC sont surtout des fonds, des trusts et des ADR, à qui la SEC n'attribue pas de secteur (décision à prendre) ; contrôles qualité `sql/12_finance_quality.sql` ; documentation de `master.company` dans OpenMetadata.
+Les contrôles sont dans `sql/12_finance_quality.sql`.
+
+**Points ouverts côté Finance** :
+- 1 214 entreprises n'ont pas de code SIC, dont 1 035 de type `other` à la SEC (décision à prendre) ;
+- 11 entreprises ont le code `0000` reçu d'EDGAR : il ne désigne aucun secteur, mais il compte pour l'instant comme renseigné ;
+- 47 codes SIC restent sans libellé (104 entreprises).
 
 ## 9. Problèmes techniques rencontrés
 
 | Problème | Cause | Solution |
 |---|---|---|
+| Catalogue OpenMetadata vide après un redémarrage du PC, serveur en boucle (`openmetadata_settings doesn't exist`) | Pile lancée depuis WSL : Docker a démarré avant WSL, ne trouve pas le dossier de la base et crée une base vide temporaire | Ouvrir WSL **avant** Docker Desktop. Sinon `docker restart openmetadata_mysql` une fois WSL lancé, puis `docker start openmetadata_server openmetadata_ingestion`. Si le catalogue manque encore, relancer `setup_openmetadata.py` et le script d'enrichissement |
 | OpenMetadata redémarre en boucle | La migration de la base interne n'avait jamais tourné (conteneurs manquants) | Relancer `docker compose up --detach --wait`, puis redémarrer `openmetadata_server` une fois la migration terminée |
 | Mot de passe admin OpenMetadata perdu | Changé puis oublié | Catalogue vide : réinitialisation complète (supprimer la base interne et l'index Elasticsearch, relancer). Noter le mot de passe hors de Git |
 | `docker` ne répond plus | Moteur Docker Desktop bloqué après plusieurs jours | Quitter Docker Desktop, `wsl --shutdown`, relancer Docker Desktop. Relancer ensuite `gouv_postgres` (`docker compose up -d --wait`) et la pile OpenMetadata |

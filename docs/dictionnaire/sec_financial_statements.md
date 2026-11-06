@@ -83,5 +83,5 @@ La deuxième source sert au MDM Tiers et Structures (référentiel `master.compa
 | CIK écrit sur 4 à 7 chiffres dans les deux sources | 100 % des lignes | Standardiser sur 10 chiffres avant de rapprocher |
 | Une entreprise a déposé deux 10-K dans le trimestre | 4 262 dépôts pour 4 261 CIK | Règle de priorité : le dépôt le plus récent gagne pour les attributs de `sub` |
 | Un même CIK peut avoir plusieurs tickers | 10 423 tickers pour 8 017 CIK | Une entreprise peut émettre plusieurs titres : `master.company` reste une ligne par CIK |
-| Nom différent entre les deux sources | 107 entreprises (ex. LendingClub devenue Happen) | Règle de priorité : le nom de la liste des tickers gagne, `sub` en secours |
+| Nom différent entre les deux sources | 117 entreprises (ex. LendingClub devenue Happen) | Règle de priorité : le nom de la liste des tickers gagne, `sub` en secours |
 | Pays absent | 96 dépôts | Mesurer la complétude (seuil commun : 95 %) |
