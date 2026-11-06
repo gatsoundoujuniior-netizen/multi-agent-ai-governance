@@ -150,7 +150,7 @@ data/raw/                datasets téléchargés (jamais dans Git)
 data/seed/               petites tables simulées (dans Git)
 docs/guide/              guide d'équipe pour réaliser son MDM
 docs/dictionnaire/       fiches catalogue et dictionnaires de données
-docs/cours/              énoncés de TP, PDF et prompts
+docs/cours/              énoncés de TP et PDF
 policies/                règles d'accès en JSON (partie 2)
 governance_engine/       API FastAPI, le portier (partie 2)
 agents/                  agents LangGraph (partie 2)
